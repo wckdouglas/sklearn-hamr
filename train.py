@@ -17,8 +17,8 @@ def tuneModel(Y, X, cores, base):
     clf = RandomForestClassifier(bootstrap=True,n_jobs=cores)
     #train_X, test_X, train_Y, test_Y = cross_validation.train_test_split(X,Y,test_size=0.2)
     loocv = cross_validation.LeaveOneOut(len(X))
-    parameters = dict(n_estimators= trainRange)
-    cv = GridSearchCV(clf, param_grid=parameters, cv = loocv)
+    parameters = {'n_estimators':trainRange}
+    cv = GridSearchCV(clf, param_grid=parameters, cv = loocv, n_jobs=cores)
     finalModel = cv.fit(X,Y)
     sys.stderr.write('Trainned random forest for %s!\n' %base)
     return finalModel
