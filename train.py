@@ -108,8 +108,7 @@ def main():
             .filterData(args.hyp, args.seqErr, args.pval)
 
     bases = np.unique(testDf['ref'].values)
-    pool = Pool(args.cores)
-    predictedData = pool.map(classifications, [(trainDf, args.cores, testDf, base) for base in bases])
+    predictedData = map(classifications, [(trainDf, args.cores, testDf, base) for base in bases])
     predictedDF = pd.concat(predictedData,axis=0)
     predictedDF.to_csv(outfilename,sep='\t',index=False,
             columns = ['chrom','start','end','ref','cov','strand','label'])
