@@ -40,10 +40,8 @@ def classifications(args):
     subTestDf = testDf[testDf['ref']==base]
     train_X = np.asarray(subTrainDf.subsetData(base),dtype=np.float64)
     test_X = np.asarray(subTestDf.subsetData(base),dtype=np.float64)
-    if np.any(np.isnan(test_X)) and np.all(np.isfinite(mat)):
-        sys.exit('really!!')
     tunedModel = tuneModel(subTrainDf['abbrev'].values, train_X, cores, base)
-    subTestDf['label'] = tunedModel.predict(np.asarray(test_X,dtype=np.float64))
+    subTestDf['label'] = tunedModel.predict(test_X)
     return subTestDf
 
 def getPvalue(correctReads,cov,seqErr):
