@@ -15,10 +15,10 @@ import argparse
 def tuneModel(Y, X, cores, base):
     trainRange = np.arange(3,40)
     clf = RandomForestClassifier(bootstrap=True,n_jobs=cores)
-    #train_X, test_X, train_Y, test_Y = cross_validation.train_test_split(X,Y,test_size=0.2)
-    loocv = cross_validation.LeaveOneOut(len(X))
+    loocv = cross_validation.LeaveOneOut(n = len(X))
+    k_fold_cv = cross_validation.KFold(n = len(X), n_folds=4)
     parameters = {'n_estimators':trainRange}
-    cv = GridSearchCV(clf, param_grid=parameters, cv = loocv, n_jobs=cores)
+    cv = GridSearchCV(clf, param_grid=parameters, cv = k_fold_cv, n_jobs=cores)
     finalModel = cv.fit(X,Y)
     sys.stderr.write('Trainned random forest for %s!\n' %base)
     return finalModel
@@ -38,10 +38,10 @@ def classifications(args):
     sys.stderr.write('Filtering %s for training\n' %(base))
     subTrainDf = trainDf[trainDf['ref']==base]
     subTestDf = testDf[testDf['ref']==base]
-    train_X = subTrainDf.subsetData(base)
-    testX = testDf.subsetData(base)
+    train_X = np.asarray(subTrainDf.subsetData(base),dtype=np.float64)
+    test_X = np.asarray(testDf.subsetData(base),dtype=np.float64)
     tunedModel = tuneModel(subTrainDf['abbrev'].values, train_X, cores, base)
-    subTestDf['label'] = tunedModel.predict(newX)
+    subTestDf['label'] = tunedModel.predict(np.asarray(test_X,dtype=np.float64))
     return subTestDf
 
 def getPvalue(correctReads,cov,seqErr):
@@ -65,23 +65,15 @@ def filterData(df,hyp,seqErr,pThreshold):
 pd.DataFrame.filterData = filterData
 
 def main():
-#    hyp = 'hyp2'
-#    seqErr = 0.015
-#    pThreshold = 0.05
-#    cores = 20
-#    tablename = 'teiTable.tsv'
-    #get variables
+    #get variable
     parser = argparse.ArgumentParser(description='Predicting modifications from mismatches')
-    parser.add_argument('--hyp', default='hyp1',
-            help = 'hypothesis to use: hyp1|hyp2 (default: hyp1)')
-    parser.add_argument('--pval', default=0.05,type=float,
-            help = 'FDR threshold [0-1] default: 0.05')
+    parser.add_argument('--hyp', default='hyp1', help = 'hypothesis to use: {hyp1|hyp2} (default: hyp1)')
+    parser.add_argument('--pval', default=0.05,type=float, help = 'FDR threshold [0-1] default: 0.05')
     parser.add_argument('--seqErr', default=0.015,type=float,
             help = 'sequencing PCR error rate [0-1] default : 0.015')
-    parser.add_argument('--Enzyme',nargs='?', required=True, choices=['tei','gsi'],
+    parser.add_argument('--enzyme', required=True, choices=['tei','gsi'], 
             help = 'Enzyme used for the library: tei|gsi')
-    parser.add_argument('--cores', default=1,type=int,
-            help = 'cores number to use (default: 1)')
+    parser.add_argument('--cores', default=1,type=int, help = 'cores number to use (default: 1)')
     parser.add_argument('--testSet',default='-',
             help = 'Sample bed file for classifying modifications for mismatch positions. [default: - (for stdin)]')
     parser.add_argument('--outfile', default='-', help='Outfile name, default: stdout (-)')
@@ -90,22 +82,20 @@ def main():
     # get in/out file names
     testTablename = args.testSet if args.testSet != '-' else sys.stdin
     outfilename = args.outfile if args.outfile != '-' else sys.stdout
-    tablename = args.Enzyme+'Table.tsv'
+    tablename = '../trainSets/' +  args.enzyme+'Table.json'
 
     message = 'Starting prediction:\n' +\
             'Using parameters:\n' +\
             '\terror rate: %.3f\n' %(args.seqErr) +\
             '\tp-cutoff:   %.3f\n' %(args.pval)+\
             '\tcores:      %i\n' %(args.cores) +\
-            '\tenzyme:     %s\n' %(args.Enzyme) +\
+            '\tenzyme:     %s\n' %(args.enzyme) +\
             '\thypothesis: %s\n' %(args.hyp)
     sys.stderr.write(message)
 
     #read files
-    trainDf = pd.read_table(tablename,sep='\t') \
-            .filterData(args.hyp, args.seqErr, args.pval)
-    testDf = pd.read_table(testTablename,sep='\t') \
-            .filterData(args.hyp, args.seqErr, args.pval)
+    trainDf = pd.read_json(tablename,'table').filterData(args.hyp, args.seqErr, args.pval)
+    testDf = pd.read_table(testTablename,sep='\t').filterData(args.hyp, args.seqErr, args.pval)
 
     bases = np.unique(testDf['ref'].values)
     predictedData = map(classifications, [(trainDf, args.cores, testDf, base) for base in bases])
