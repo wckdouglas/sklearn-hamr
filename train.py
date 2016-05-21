@@ -16,9 +16,9 @@ def tuneModel(Y, X, cores, base):
     trainRange = np.arange(3,40)
     clf = RandomForestClassifier(bootstrap=True,n_jobs=cores)
     loocv = cross_validation.LeaveOneOut(n = len(X))
-    k_fold_cv = cross_validation.KFold(n = len(X), n_folds=4)
+    #k_fold_cv = cross_validation.KFold(n = len(X), n_folds=4)
     parameters = {'n_estimators':trainRange}
-    cv = GridSearchCV(clf, param_grid=parameters, cv = k_fold_cv, n_jobs=cores)
+    cv = GridSearchCV(clf, param_grid=parameters, cv = loocv, n_jobs=cores)
     finalModel = cv.fit(X,Y)
     sys.stderr.write('Trainned random forest for %s!\n' %base)
     return finalModel
