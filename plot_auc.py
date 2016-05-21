@@ -57,10 +57,13 @@ def mergeAbbrev(abb):
         return abb
     
 def modificationType(abb):
-    if abb in ['m1A|m1I','I','m3C','acp3U','m3U','m2G|m2,2G']:
+    if abb in ['m1A|m1I','I','m3C','acp3U','m3U','m2G|m2,2G','m1G','m6,6A']:
         return 'On basepair'
     else:
         return 'not on basepair'
+
+def makeEnzyme(enz):
+    return ['TeI-4c' if e == 'tei' else 'Gsi-IIc' for e in enz]
 
 def get_roc(y_test, y_score, y_train):
     classes = np.unique(y_train)
@@ -77,7 +80,7 @@ def get_roc(y_test, y_score, y_train):
     return roc_auc
 
 def validation(X,Y):
-    repeats = 10
+    repeats = 2
     metric_list = [] 
     parameters = {'estimator__n_estimators':np.arange(5,40)}
         
@@ -122,13 +125,14 @@ def readFile(enzyme):
     auc = pd.concat(auc,axis=0)
     auc['type'] = map(modificationType,auc['classes'])
     auc['enzyme'] = np.repeat(enzyme,len(auc))
+    auc['enzyme'] = makeEnzyme(auc['enzyme'])
     return auc
 
 def plot(aucDF, figurename):
     sns.set_style('white')
     with sns.plotting_context('paper',font_scale=2):
         p = sns.FacetGrid(data = aucDF, col = 'base', row='enzyme', 
-                sharex=False, aspect = 2, size=3,margin_titles=True)
+                sharex=False, aspect = 1.5, size=3,margin_titles=True)
     p.map(sns.swarmplot,'classes', 'AUC','type',palette=sns.color_palette("hls", 2))
     p.add_legend()
     p.set(ylim=(0,1.2))
@@ -138,14 +142,17 @@ def plot(aucDF, figurename):
     p.fig.text(x = 0, y = 0.8, s='Area Under Curve', rotation = 90, size=12) # y axis label
     p.fig.text(x = 0.4, y = 0, s= 'Modifications') # x axis label
     p.savefig(figurename)
+    print 'Plotted %s' %figurename
 
 def main():
     enzymes = ['tei','gsi']
-    aucDF = map(readFile,enzymes)
-    aucDF = pd.concat(aucDF,axis=0)
     figurename = 'auc_plot.png'
     table_name = 'auc_plot.tsv'
+    aucDF = map(readFile,enzymes)
+    aucDF = pd.concat(aucDF,axis=0)
     aucDF.to_csv(table_name,sep='\t',index=False)
+    print 'Written %s' %table_name
+    #aucDF = pd.read_csv(table_name,sep='\t')
     plot(aucDF, figurename)
     return 0
 
