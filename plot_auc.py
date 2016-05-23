@@ -80,7 +80,7 @@ def get_roc(y_test, y_score, y_train):
     return roc_auc
 
 def validation(X,Y):
-    repeats = 2
+    repeats = 20
     metric_list = [] 
     parameters = {'estimator__n_estimators':np.arange(5,40)}
         
@@ -89,7 +89,7 @@ def validation(X,Y):
         X_train, X_test, y_train, y_test = cross_validation.train_test_split(X, Y, test_size=0.2,random_state=i)   
         loocv = cross_validation.LeaveOneOut(n = len(X_train))
         kfold = cross_validation.KFold(n = len(X_train),n_folds = 6)
-        cv = GridSearchCV(clf,param_grid=parameters,n_jobs=-1, cv=kfold)
+        cv = GridSearchCV(clf,param_grid=parameters,n_jobs=-1, cv=loocv)
         cv.fit(X_train, y_train)
         tuned_model = cv.best_estimator_
         model = tuned_model.fit(X_train,y_train)
@@ -129,18 +129,22 @@ def readFile(enzyme):
     return auc
 
 def plot(aucDF, figurename):
+    color_order = np.unique(aucDF['type'])
     sns.set_style('white')
-    with sns.plotting_context('paper',font_scale=2):
-        p = sns.FacetGrid(data = aucDF, col = 'base', row='enzyme', 
+    with sns.plotting_context('paper',font_scale=1.3):
+        p = sns.FacetGrid(data = aucDF, col = 'base', row='enzyme',
                 sharex=False, aspect = 1.5, size=3,margin_titles=True)
-    p.map(sns.swarmplot,'classes', 'AUC','type',palette=sns.color_palette("hls", 2))
+    p.map(sns.swarmplot, 'classes', 'AUC', 'type',
+            hue_order = color_order,
+            palette=sns.color_palette("hls", 2))
     p.add_legend()
     p.set(ylim=(0,1.2))
     p.set(xlabel=' ', ylabel=' ')
     [plt.setp(ax.texts, text="") for ax in p.axes.flat]
-    p.set_titles(row_template='{row_name}', col_template="{col_name}",fontweight='bold', size=12)
-    p.fig.text(x = 0, y = 0.8, s='Area Under Curve', rotation = 90, size=12) # y axis label
-    p.fig.text(x = 0.4, y = 0, s= 'Modifications') # x axis label
+    [plt.setp(ax.get_xticklabels(), rotation=25) for ax in p.axes.flat]
+    p.set_titles(row_template='{row_name}', col_template="{col_name}",fontweight='bold', size=18)
+    p.fig.text(x = 0, y = 0.6, s='Area Under Curve', rotation = 90, size=18) # y axis label
+#    p.fig.text(x = 0.4, y = 0, s= 'Modifications') # x axis label
     p.savefig(figurename)
     print 'Plotted %s' %figurename
 
@@ -152,7 +156,7 @@ def main():
     aucDF = pd.concat(aucDF,axis=0)
     aucDF.to_csv(table_name,sep='\t',index=False)
     print 'Written %s' %table_name
-    #aucDF = pd.read_csv(table_name,sep='\t')
+    aucDF = pd.read_csv(table_name,sep='\t')
     plot(aucDF, figurename)
     return 0
 
