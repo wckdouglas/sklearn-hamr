@@ -143,8 +143,7 @@ def plot(aucDF, figurename):
     [plt.setp(ax.texts, text="") for ax in p.axes.flat]
     [plt.setp(ax.get_xticklabels(), rotation=25) for ax in p.axes.flat]
     p.set_titles(row_template='{row_name}', col_template="{col_name}",fontweight='bold', size=18)
-    p.fig.text(x = 0, y = 0.6, s='Area Under Curve', rotation = 90, size=18) # y axis label
-#    p.fig.text(x = 0.4, y = 0, s= 'Modifications') # x axis label
+    p.fig.text(x = 0, y = 0.65, s='Area Under Curve', rotation = 90, size=18) # y axis label
     p.savefig(figurename)
     print 'Plotted %s' %figurename
 
